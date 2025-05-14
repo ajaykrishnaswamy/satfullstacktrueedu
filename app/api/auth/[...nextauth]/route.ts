@@ -1,6 +1,7 @@
 import NextAuth, { DefaultSession, Session } from "next-auth"
 import { JWT } from "next-auth/jwt"
 import GoogleProvider from "next-auth/providers/google"
+import { supabase } from "@/utils/supabase"
 
 // Extend the built-in session type
 declare module "next-auth" {
@@ -33,6 +34,17 @@ const handler = NextAuth({
     error: "/auth/error",
   },
   callbacks: {
+    async signIn({ user }) {
+      if (user?.email) {
+        await supabase
+          .from('users')
+          .upsert({
+            email: user.email,
+            name: user.name || null,
+          }, { onConflict: 'email' });
+      }
+      return true;
+    },
     async jwt({ token, trigger, session }) {
       if (trigger === "update" && session?.user?.type) {
         token.type = session.user.type
