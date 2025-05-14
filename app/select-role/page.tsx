@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { School, GraduationCap } from "lucide-react"
+import { supabase } from '@/utils/supabase'
 
 export default function SelectRole() {
   const router = useRouter()
@@ -24,6 +25,23 @@ export default function SelectRole() {
         type: role
       }
     })
+
+    // Update the user type in the database
+    if (session?.user?.email) {
+      console.log('Updating user with email:', session.user.email);
+      const { data, error } = await supabase
+        .from('users')
+        .update({ type: role })
+        .eq('email', session.user.email)
+        .select();
+      console.log('Supabase update result:', { data, error });
+      if (error) {
+        alert('Supabase update error: ' + error.message);
+      }
+      if (data && data.length === 0) {
+        alert('No user row was updated. Check the email value.');
+      }
+    }
 
     // Redirect to the appropriate dashboard
     router.push(role === "instructor" ? "/instructor" : "/student")

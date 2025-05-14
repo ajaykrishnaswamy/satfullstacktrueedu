@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { School, GraduationCap } from "lucide-react"
+import { supabase } from "@/utils/supabase"
 
 export default function RoleSelect() {
   const router = useRouter()
@@ -23,7 +24,21 @@ export default function RoleSelect() {
 
   const handleRoleSelect = async (role: "instructor" | "student") => {
     try {
-      // Update the session with the selected role
+      // 1. Update the user's type in Supabase
+      if (session?.user?.email) {
+        const { data, error } = await supabase
+          .from('users')
+          .update({ type: role })
+          .eq('email', session.user.email)
+          .select();
+        if (error) {
+          throw error;
+        }
+        if (!data || data.length === 0) {
+          throw new Error('No user row was updated. Check the email value.');
+        }
+      }
+      // 2. Update the session with the selected role
       const updatedSession = await update({
         ...session,
         user: {
@@ -36,8 +51,9 @@ export default function RoleSelect() {
         // Redirect to the appropriate dashboard
         router.push(role === "instructor" ? "/instructor" : "/student")
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating role:", error)
+      alert('Error updating role: ' + (error?.message || error));
     }
   }
 
